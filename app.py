@@ -88,8 +88,10 @@ if not all_selected:
 def _fetch_fred_csv(code, start, end):
     url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={code}"
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-    resp = requests.get(url, headers=headers, timeout=30)
+    resp = requests.get(url, headers=headers, timeout=15)
     resp.raise_for_status()
+    if "DATE" not in resp.text[:100] and "date" not in resp.text[:100]:
+        raise ValueError(f"Unexpected response for {code}: {resp.text[:200]}")
     df = pd.read_csv(
         io.StringIO(resp.text),
         index_col=0, parse_dates=True, na_values="."
@@ -102,16 +104,28 @@ def _fetch_fred_csv(code, start, end):
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_series(names_tuple, start, end):
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     frames = {}
-    failed = []
-    for name in names_tuple:
+    failed = {}
+
+    def _fetch_one(name):
         code = ALL_SERIES[name]
         try:
             s = _fetch_fred_csv(code, start, end)
             s.columns = [name]
-            frames[name] = s[name]
-        except Exception:
-            failed.append(name)
+            return name, s[name], None
+        except Exception as e:
+            return name, None, str(e)
+
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        futures = {executor.submit(_fetch_one, n): n for n in names_tuple}
+        for future in as_completed(futures):
+            name, series, err = future.result()
+            if series is not None:
+                frames[name] = series
+            else:
+                failed[name] = err
+
     if not frames:
         return pd.DataFrame(), failed
     df = pd.DataFrame(frames)
@@ -162,16 +176,16 @@ with st.spinner("Fetching data from FRED…"):
     rec_df = fetch_recession_dates(start_date, end_date) if recession_shade else None
 
 if failed:
-    st.warning(f"Could not load: {', '.join(failed)}")
-    with st.expander("🔍 Debug info"):
-        test_code = "SP500"
-        test_url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={test_code}"
+    st.warning(f"Could not load: {', '.join(failed.keys())}")
+    with st.expander("🔍 Debug info (click to expand)"):
+        test_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=SP500"
         try:
-            r = requests.get(test_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
+            r = requests.get(test_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
             st.write(f"HTTP status: {r.status_code}")
-            st.write(f"Response preview: {r.text[:300]}")
+            st.code(r.text[:500])
         except Exception as e:
             st.write(f"Request failed: {e}")
+        st.write("Failed series errors:", failed)
 
 if data.empty:
     st.error("No data returned. Please check your date range or internet connection.")
