@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas_datareader.data as web
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -84,6 +83,15 @@ if not all_selected:
     st.stop()
 
 
+def _fetch_fred_csv(code, start, end):
+    url = f"https://fred.stlouisfed.org/graph/freddata.csv?id={code}"
+    df = pd.read_csv(url, index_col=0, parse_dates=True, na_values=".")
+    df.columns = [code]
+    df.index = pd.to_datetime(df.index)
+    df = df.loc[str(start):str(end)]
+    return df
+
+
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_series(names_tuple, start, end):
     frames = {}
@@ -91,9 +99,8 @@ def fetch_series(names_tuple, start, end):
     for name in names_tuple:
         code = ALL_SERIES[name]
         try:
-            s = web.get_data_fred(code, start=str(start), end=str(end))
+            s = _fetch_fred_csv(code, start, end)
             s.columns = [name]
-            s.index = pd.to_datetime(s.index)
             frames[name] = s[name]
         except Exception:
             failed.append(name)
@@ -107,8 +114,8 @@ def fetch_series(names_tuple, start, end):
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_recession_dates(start, end):
     try:
-        rec = web.get_data_fred("USREC", start=str(start), end=str(end))
-        rec.index = pd.to_datetime(rec.index)
+        rec = _fetch_fred_csv("USREC", start, end)
+        rec.columns = ["USREC"]
         return rec
     except Exception:
         return None
@@ -380,7 +387,7 @@ with tab4:
 
 st.markdown("---")
 st.caption(
-    f"Data sourced from **FRED (Federal Reserve Bank of St. Louis)** via `pandas-datareader`. "
+    f"Data sourced from **FRED (Federal Reserve Bank of St. Louis)** via direct CSV API. "
     f"Series: SP500, NASDAQCOM, VIXCLS, DGS10, DGS2, T10Y2Y, FEDFUNDS, CPIAUCSL, UNRATE, INDPRO, A191RL1Q225SBEA. "
     f"Retrieved: {date.today().strftime('%d %B %Y')}."
 )
