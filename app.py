@@ -1,3 +1,5 @@
+import requests
+import io
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -84,8 +86,14 @@ if not all_selected:
 
 
 def _fetch_fred_csv(code, start, end):
-    url = f"https://fred.stlouisfed.org/graph/freddata.csv?id={code}"
-    df = pd.read_csv(url, index_col=0, parse_dates=True, na_values=".")
+    url = f"https://fred.stlouisfed.org/series/{code}/downloaddata/{code}.csv"
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; student-project)"}
+    resp = requests.get(url, headers=headers, timeout=30)
+    resp.raise_for_status()
+    df = pd.read_csv(
+        io.StringIO(resp.text),
+        index_col=0, parse_dates=True, na_values="."
+    )
     df.columns = [code]
     df.index = pd.to_datetime(df.index)
     df = df.loc[str(start):str(end)]
