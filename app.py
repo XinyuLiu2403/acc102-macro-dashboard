@@ -86,8 +86,8 @@ if not all_selected:
 
 
 def _fetch_fred_csv(code, start, end):
-    url = f"https://fred.stlouisfed.org/series/{code}/downloaddata/{code}.csv"
-    headers = {"User-Agent": "Mozilla/5.0 (compatible; student-project)"}
+    url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={code}"
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
     resp = requests.get(url, headers=headers, timeout=30)
     resp.raise_for_status()
     df = pd.read_csv(
