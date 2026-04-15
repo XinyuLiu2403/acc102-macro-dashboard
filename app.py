@@ -1,5 +1,4 @@
-import requests
-import io
+import os
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -8,6 +7,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy import stats
 from datetime import date
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 
 SERIES = {
     "Equity & Volatility": {
@@ -85,47 +86,26 @@ if not all_selected:
     st.stop()
 
 
-def _fetch_fred_csv(code, start, end):
-    url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={code}"
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-    resp = requests.get(url, headers=headers, timeout=15)
-    resp.raise_for_status()
-    if "DATE" not in resp.text[:100] and "date" not in resp.text[:100]:
-        raise ValueError(f"Unexpected response for {code}: {resp.text[:200]}")
-    df = pd.read_csv(
-        io.StringIO(resp.text),
-        index_col=0, parse_dates=True, na_values="."
-    )
+def _load_local(code, start, end):
+    path = os.path.join(DATA_DIR, f"{code}.csv")
+    df = pd.read_csv(path, index_col=0, parse_dates=True, na_values=".")
     df.columns = [code]
     df.index = pd.to_datetime(df.index)
-    df = df.loc[str(start):str(end)]
-    return df
+    return df.loc[str(start):str(end)]
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(show_spinner=False)
 def fetch_series(names_tuple, start, end):
-    from concurrent.futures import ThreadPoolExecutor, as_completed
     frames = {}
-    failed = {}
-
-    def _fetch_one(name):
+    failed = []
+    for name in names_tuple:
         code = ALL_SERIES[name]
         try:
-            s = _fetch_fred_csv(code, start, end)
+            s = _load_local(code, start, end)
             s.columns = [name]
-            return name, s[name], None
-        except Exception as e:
-            return name, None, str(e)
-
-    with ThreadPoolExecutor(max_workers=6) as executor:
-        futures = {executor.submit(_fetch_one, n): n for n in names_tuple}
-        for future in as_completed(futures):
-            name, series, err = future.result()
-            if series is not None:
-                frames[name] = series
-            else:
-                failed[name] = err
-
+            frames[name] = s[name]
+        except Exception:
+            failed.append(name)
     if not frames:
         return pd.DataFrame(), failed
     df = pd.DataFrame(frames)
@@ -133,10 +113,10 @@ def fetch_series(names_tuple, start, end):
     return df, failed
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(show_spinner=False)
 def fetch_recession_dates(start, end):
     try:
-        rec = _fetch_fred_csv("USREC", start, end)
+        rec = _load_local("USREC", start, end)
         rec.columns = ["USREC"]
         return rec
     except Exception:
@@ -171,21 +151,11 @@ def add_recession_shading(fig, rec_df):
     return fig
 
 
-with st.spinner("Fetching data from FRED…"):
-    data, failed = fetch_series(tuple(all_selected), start_date, end_date)
-    rec_df = fetch_recession_dates(start_date, end_date) if recession_shade else None
+data, failed = fetch_series(tuple(all_selected), start_date, end_date)
+rec_df = fetch_recession_dates(start_date, end_date) if recession_shade else None
 
 if failed:
-    st.warning(f"Could not load: {', '.join(failed.keys())}")
-    with st.expander("🔍 Debug info (click to expand)"):
-        test_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=SP500"
-        try:
-            r = requests.get(test_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
-            st.write(f"HTTP status: {r.status_code}")
-            st.code(r.text[:500])
-        except Exception as e:
-            st.write(f"Request failed: {e}")
-        st.write("Failed series errors:", failed)
+    st.warning(f"Could not load: {', '.join(failed)}")
 
 if data.empty:
     st.error("No data returned. Please check your date range or internet connection.")
