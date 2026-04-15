@@ -163,6 +163,15 @@ with st.spinner("Fetching data from FRED…"):
 
 if failed:
     st.warning(f"Could not load: {', '.join(failed)}")
+    with st.expander("🔍 Debug info"):
+        test_code = "SP500"
+        test_url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={test_code}"
+        try:
+            r = requests.get(test_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=15)
+            st.write(f"HTTP status: {r.status_code}")
+            st.write(f"Response preview: {r.text[:300]}")
+        except Exception as e:
+            st.write(f"Request failed: {e}")
 
 if data.empty:
     st.error("No data returned. Please check your date range or internet connection.")
