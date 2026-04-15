@@ -2,7 +2,7 @@
 
 **Module:** ACC102 Mini Assignment | **Track:** 4 — Interactive Data Analysis Tool | **Author:** [Your Name] | **Student ID:** [Your ID]
 
-> **Live App:** [https://your-app-link.streamlit.app](https://your-app-link.streamlit.app) ← *replace with your Streamlit Community Cloud link after deployment*  
+> **Live App:** [https://acc102-macro-dashboard-wyd7uqg4shqkb23krppnpm.streamlit.app](https://acc102-macro-dashboard-wyd7uqg4shqkb23krppnpm.streamlit.app)
 
 
 ---
@@ -16,7 +16,7 @@ How have US monetary policy shifts — particularly the post-COVID rate-hiking c
 ## 2. Data
 
 **Source:** Federal Reserve Bank of St. Louis — [FRED Economic Data](https://fred.stlouisfed.org/)  
-**Access method:** Automated API retrieval via `pandas-datareader` (no manual download needed)  
+**Access method:** Pre-downloaded CSV files from FRED (stored in `data/` folder); no API key required  
 **Access date:** April 2026  
 
 | FRED Code | Series | Frequency |
@@ -40,7 +40,7 @@ FRED is a publicly maintained US government database widely used in academic eco
 
 ## 3. Methods
 
-1. **Data acquisition** — fetched 12 FRED series via `pandas-datareader`; no hard-coded paths; data updates automatically each run
+1. **Data acquisition** — downloaded 12 FRED series as CSV files; stored in `data/` folder; app reads locally for reliability
 2. **Cleaning & alignment** — forward-filled isolated gaps (limit 3 periods); resampled mixed-frequency series to monthly for cross-series analysis
 3. **Return & volatility calculation** — daily simple returns; 30-day rolling annualised volatility (σ × √252)
 4. **Inflation derivation** — CPI YoY change computed as 12-period percentage change on the monthly price level index
@@ -79,7 +79,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Opens at `http://localhost:8501`. Data is fetched live from FRED on launch (requires internet connection).
+Opens at `http://localhost:8501`. Data is loaded from local CSV files in the `data/` folder (no internet connection required).
 
 ### Run the analytical notebook
 
@@ -91,9 +91,9 @@ Open `analysis.ipynb` in Jupyter Notebook or JupyterLab and run all cells from t
 
 | Item | Link |
 |------|------|
-| Live Streamlit App | [https://your-app-link.streamlit.app](https://your-app-link.streamlit.app) |
+| Live Streamlit App | [https://acc102-macro-dashboard-wyd7uqg4shqkb23krppnpm.streamlit.app](https://acc102-macro-dashboard-wyd7uqg4shqkb23krppnpm.streamlit.app) |
 | Demo Video (1–3 min) | [link to your video] |
-| GitHub Repository | [https://github.com/your-username/your-repo](https://github.com/your-username/your-repo) |
+| GitHub Repository | [https://github.com/XinyuLiu2403/acc102-macro-dashboard](https://github.com/XinyuLiu2403/acc102-macro-dashboard) |
 
 ---
 
@@ -120,6 +120,7 @@ Open `analysis.ipynb` in Jupyter Notebook or JupyterLab and run all cells from t
 ├── app.py               # Streamlit interactive dashboard (entry file)
 ├── analysis.ipynb       # Jupyter notebook — full analytical workflow
 ├── requirements.txt     # Python dependencies
+├── data/                # Pre-downloaded FRED CSV files (12 series)
 └── README.md            # This file
 ```
 
@@ -129,7 +130,7 @@ Open `analysis.ipynb` in Jupyter Notebook or JupyterLab and run all cells from t
 
 Federal Reserve Bank of St. Louis. *FRED Economic Data*. Retrieved April 2026.  
 URL: https://fred.stlouisfed.org  
-Series accessed via `pandas-datareader` Python library.
+Series accessed via direct FRED CSV download (https://fred.stlouisfed.org/graph/fredgraph.csv).
 
 ---
 
