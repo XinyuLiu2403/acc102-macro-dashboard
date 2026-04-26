@@ -1,9 +1,6 @@
 # US Macroeconomic & Financial Market Dashboard
 
-**Module:** ACC102 Mini Assignment | **Track:** 4 — Interactive Data Analysis Tool | **Author:** [Your Name] | **Student ID:** [Your ID]
-
-> **Live App:** [https://acc102-macro-dashboard-wyd7uqg4shqkb23krppnpm.streamlit.app](https://acc102-macro-dashboard-wyd7uqg4shqkb23krppnpm.streamlit.app)
-
+**Module:** ACC102 Mini Assignment | **Track:** 4 — Interactive Data Analysis Tool | **Author:** [Xinyu.Liu] | **Student ID:** [2472605]
 
 ---
 
